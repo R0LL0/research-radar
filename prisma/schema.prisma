@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+  RSS
+  ARXIV
+}
+
+enum AiProvider {
+  OPENAI_COMPATIBLE
+  OPENAI
+  ANTHROPIC
+  OPENROUTER
+  GROQ
+  MISTRAL
+  TOGETHER
+  FIREWORKS
+  PERPLEXITY
+  DEEPSEEK
+  XAI
+  CEREBRAS
+  OLLAMA
+  LM_STUDIO
+  CUSTOM
+}
+
+enum SubscriptionPlan {
+  STARTER
+  TEAM
+  ENTERPRISE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  workspaceId  String    @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sessions  Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner    User?
+  settings WorkspaceSettings?
+  sources  Source[]
+  digests  IntelligenceDigest[]
+  jobs     BackgroundJob[]
+}
+
+model WorkspaceSettings {
+  workspaceId               String           @id
+  plan                      SubscriptionPlan @default(STARTER)
+  aiProvider                AiProvider       @default(OPENAI_COMPATIBLE)
+  aiBaseUrl                 String?
+  aiModel                   String?
+  aiApiKeyCiphertext        String?
+  aiApiKeyUpdatedAt         DateTime?
+  autoIngestEnabled         Boolean          @default(true)
+  autoIngestIntervalMinutes Int              @default(360)
+  lastScheduledIngestAt     DateTime?
+  digestWebhookUrl          String?
+  digestWebhookEnabled      Boolean          @default(false)
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model BackgroundJob {
+  id          String   @id @default(cuid())
+  workspaceId String
+  kind        String
+  status      String   @default("PENDING")
+  progress    Int      @default(0)
+  total       Int      @default(0)
+  message     String?
+  filterQs    String?
+  payload     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind, status, createdAt])
+}
+
+model Source {
+  id               String     @id @default(cuid())
+  workspaceId      String
+  type             SourceType
+  url              String
+  title            String?
+  enabled          Boolean    @default(true)
+  lastRefreshAt    DateTime?
+  lastSuccessAt    DateTime?
+  lastRefreshError String?
+  lastItemCount    Int        @default(0)
+  healthStatus     String     @default("UNKNOWN")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  items     Item[]
+
+  @@index([workspaceId, enabled, createdAt])
+  @@unique([workspaceId, type, url])
+}
+
+model Item {
+  id          String    @id @default(cuid())
+  sourceId    String
+  externalId  String?
+  url         String?
+  title       String
+  author      String?
+  publishedAt DateTime?
+  fetchedAt   DateTime  @default(now())
+  raw         Json?
+
+  source   Source       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  content  ItemContent?
+  summary  ItemSummary?
+
+  @@index([sourceId, fetchedAt])
+  @@index([publishedAt])
+  @@unique([sourceId, externalId])
+}
+
+model ItemContent {
+  id          String   @id @default(cuid())
+  itemId      String   @unique
+  text        String
+  extractedAt DateTime @default(now())
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+model ItemSummary {
+  id          String   @id @default(cuid())
+  itemId      String   @unique
+  model       String
+  summaryMd   String
+  citations   Json
+  createdAt   DateTime @default(now())
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+model IntelligenceDigest {
+  id          String   @id @default(cuid())
+  workspaceId String
+  kind        String   @default("daily")
+  title       String
+  model       String
+  digestMd    String
+  stats       Json
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind, createdAt])
+}
