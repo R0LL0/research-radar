@@ -51,7 +51,7 @@ Feeds are noisy. Reading everything is slow. Copy-pasting into ChatGPT loses pro
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/research-radar.git
+git clone https://github.com/R0LL0/research-radar.git
 cd research-radar
 npm install
 ```
@@ -245,23 +245,4 @@ SQLite is ideal for **single-user local** use. For multi-tenant hosting:
 
 ## License
 
-MIT — see [LICENSE](LICENSE) if present; add one before publishing if you need explicit terms.
-
----
-
-## Repo name suggestion
-
-Use **`research-radar`** on GitHub — short, matches the product, good for SEO and portfolio links.
-
-Alternatives if taken: `research-radar-app`, `research-radar-ai`, `radar-research`.
-
-After creating the empty repo:
-
-```bash
-git remote add origin https://github.com/YOUR_USERNAME/research-radar.git
-git add .
-git commit -m "Initial commit: Research Radar local-first intelligence app"
-git push -u origin main
-```
-
-**Do not commit** `.env`, `*.db`, or API keys — they are already in `.gitignore`.
+MIT — see [LICENSE](LICENSE).
